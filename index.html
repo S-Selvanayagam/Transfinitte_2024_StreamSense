@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        canvas {
+            max-width: 800px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Real-time Data Dashboard</h1>
+    <canvas id="myChart"></canvas>
+    <button id="changeChartType">Change Chart Type</button>
+
+    <script>
+        const socket = io('http://localhost:3000'); // Update with your server URL
+        const ctx = document.getElementById('myChart').getContext('2d');
+        let chartType = 'bar'; // Default chart type
+        let myChart;
+        let dataPoints = []; // Array to store incoming data points
+
+        // Initialize chart
+        function initChart() {
+            myChart = new Chart(ctx, {
+                type: chartType,
+                data: {
+                    labels: [], // Labels for X-axis (e.g., User IDs)
+                    datasets: [{
+                        label: 'Scores',
+                        data: [], // Data points for Y-axis
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1,
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        // Listen for new data
+        socket.on('newData', (data) => {
+            console.log('New data received:', data);
+            // Push the new data point into the dataPoints array
+            dataPoints.push(data);
+
+            // Clear previous labels and data to avoid duplication
+            myChart.data.labels = [];
+            myChart.data.datasets[0].data = [];
+
+            // Populate labels and data with all points
+            dataPoints.forEach(point => {
+                myChart.data.labels.push(`User ${point.userId}`);
+                myChart.data.datasets[0].data.push(point.score);
+            });
+
+            myChart.update();
+        });
+
+        // Change chart type on button click
+        document.getElementById('changeChartType').addEventListener('click', () => {
+            chartType = chartType === 'bar' ? 'line' : 'bar'; // Toggle between bar and line chart
+            myChart.destroy(); // Destroy old chart
+            initChart(); // Reinitialize chart with new type
+            // Re-add the existing data points to the new chart
+            dataPoints.forEach(point => {
+                myChart.data.labels.push(`User ${point.userId}`);
+                myChart.data.datasets[0].data.push(point.score);
+            });
+            myChart.update();
+        });
+
+        // Initialize the chart on page load
+        window.onload = initChart;
+    </script>
+</body>
+</html>
