@@ -6,3 +6,6 @@ RUN apt-get -y update
 RUN apt-get -y upgrade
 RUN apt-get install -y --no-install-recommends apt-utils
 RUN apt-get install -y curl
+
+COPY ../scripts/kafka-connect/ /home/
+RUN chmod u+x /home/*.sh

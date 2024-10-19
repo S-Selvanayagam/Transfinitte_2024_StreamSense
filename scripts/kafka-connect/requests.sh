@@ -20,8 +20,8 @@ curl -X POST \
       "connector.class": "com.mongodb.kafka.connect.MongoSourceConnector",
       "connection.uri": "mongodb://mongo1:27017/?replicaSet=rs0",
       "database": "quickstart",
-      "collection": "sampleData",
-      "pipeline": "[{\"$match\": {\"operationType\": \"insert\"}}, {$addFields : {\"fullDocument.travel\":\"MongoDB Kafka Connector\"}}]",
+      "collection": "abcd",
+      "pipeline": "[]",
 
       "output.json.formatter": "com.mongodb.kafka.connect.source.json.formatter.SimplifiedJson",
       "output.format.value": "schema",
@@ -32,13 +32,7 @@ curl -X POST \
       "key.converter": "org.apache.kafka.connect.storage.StringConverter",
 
       "output.schema.infer.value" : true,
-      "publish.full.document.only": true,
-
-      "transforms": "createKey,extractString",
-      "transforms.createKey.type": "org.apache.kafka.connect.transforms.ValueToKey",
-      "transforms.createKey.fields": "hello",
-      "transforms.extractString.type": "org.apache.kafka.connect.transforms.ExtractField$Key",
-      "transforms.extractString.field": "hello"
+      "publish.full.document.only": true
     }
   }
   ' \
@@ -53,7 +47,7 @@ curl -X POST \
     "config": {
       "connector.class": "io.confluent.connect.elasticsearch.ElasticsearchSinkConnector",
       "connection.url": "http://elasticsearch:9200",
-      "topics": "quickstart.sampleData",
+      "topics": "quickstart.abcd",
       "tasks.max": "1",
 
       "value.converter":"io.confluent.connect.json.JsonSchemaConverter",

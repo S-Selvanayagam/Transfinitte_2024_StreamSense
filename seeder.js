@@ -10,7 +10,7 @@ const client = new MongoClient(uri, {
 
 // Database and collection to seed
 const dbName = 'quickstart';
-const collectionName = 'dummydata';
+const collectionName = 'abcd';
 
 // Function to generate a random delay between 500 and 1200 ms
 const randomDelay = () => Math.floor(Math.random() * 701) + 500; // 0 to 700 ms + 500 = 500 to 1200 ms
@@ -22,7 +22,7 @@ const generateSimpleNumericRecord = () => ({
   age: faker.number.int({ min: 18, max: 70 }),
   heightInCm: faker.number.int({ min: 150, max: 200 }),
   weightInKg: faker.number.float({ min: 50, max: 100, precision: 0.1 }),
-  accountBalance: parseFloat(faker.finance.amount(100, 10000, 2)),
+  accountBalance: parseFloat(faker.finance.amount(100, 10000, 2)).toFixed(2),
   transactionCount: faker.number.int({ min: 1, max: 50 }),
   loginAttempts: faker.number.int({ min: 0, max: 10 }),
   averageSessionTimeInMinutes: faker.number.float({ min: 5, max: 60, precision: 0.1 }),
@@ -48,7 +48,7 @@ async function seedCollection() {
     while (true) {
       const record = generateSimpleNumericRecord();
       await collection.insertOne(record);
-      console.log(`Inserted a new record`);
+      console.log(`Inserted a new record accbal: ${record.accountBalance}, id: ${record.userId}`);
 
       // Wait for a random delay before the next insertion
       await new Promise((resolve) => setTimeout(resolve, randomDelay()));

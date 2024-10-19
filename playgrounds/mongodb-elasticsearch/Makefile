@@ -10,6 +10,9 @@ down.rm:
 up:
 	docker compose -p poc-kafka-connect-cdc-mongodb-to-es up --force-recreate --build --renew-anon-volumes --remove-orphans -d
 
+setup:
+	docker exec mongo1 /home/requests.sh
+
 up.rm:
 	docker-compose -p poc-kafka-connect-cdc-mongodb-to-es up -d 
 

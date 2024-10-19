@@ -117,10 +117,13 @@ services:
       - "27017:27017"
       - "35001:27017"
     command: --replSet rs0 --oplogSize 128
+    volumes:
+      - ./mongo/data:/data/db
     depends_on:
       - zookeeper
       - broker
       - connect
+      - redpanda
     networks:
       - localnet
     restart: always
