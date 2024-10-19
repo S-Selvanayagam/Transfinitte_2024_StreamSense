@@ -1,61 +1,66 @@
-const { MongoClient, ObjectId, Binary } = require('mongodb');
+const { MongoClient } = require('mongodb');
 const http = require('http');
 const { Server } = require('socket.io');
-const cors = require('cors'); // Import cors
+const cors = require('cors');
 
-// Server and MongoDB connection details
-const uri = 'mongodb://localhost:27017/?replicaSet=rs0&directConnection=true';
-const port = process.env.PORT || 3000; // Use environment variable for port
+// Import configuration from seeder script
+const config = {
+  uri: 'mongodb://localhost:27017/?replicaSet=rs0&directConnection=true',
+  dbName: 'mass',
+  collections: ['dummyuser', 'geolocation', 'sales'],
+};
 
-const client = new MongoClient(uri);
-const dbName = 'quickstart';
-const collectionName = 'dummydata';
+const port = process.env.PORT || 3000;
+const client = new MongoClient(config.uri);
 
-async function watchCollection() {
+async function watchCollections() {
   try {
     await client.connect();
     console.log('Connected to MongoDB replica set');
 
-    const db = client.db(dbName);
-    const collection = db.collection(collectionName);
-
-    const changeStream = collection.watch();
-    console.log(`Watching for changes in the ${collectionName} collection...`);
-
-    // Setup Socket.IO server
+    const db = client.db(config.dbName);
     const app = http.createServer();
-    const io = new Server(app, {
-      cors: {
-        origin: "http://127.0.0.1:5500", // Allow requests from your frontend
-        methods: ["GET", "POST"],
-        allowedHeaders: ["my-custom-header"],
-        credentials: true
-      }
-    });
-
-    io.on('connection', (socket) => {
-      console.log('Client connected');
-
+    
+    // Set up watchers for each collection
+    config.collections.forEach(collectionName => {
+      const collection = db.collection(collectionName);
+      const changeStream = collection.watch();
+      
+      console.log(`Watching for changes in the ${collectionName} collection...`);
+      
       changeStream.on('change', (change) => {
-        console.log('Change detected:', change);
-        // Check for insert operation and extract relevant data
-        if (change.operationType === 'insert') {
-          const data = {
-            userId: change.fullDocument.userId,
-            score: change.fullDocument.score,
-            age: change.fullDocument.age,
-            heightInCm: change.fullDocument.heightInCm,
-            weightInKg: change.fullDocument.weightInKg,
-            accountBalance: change.fullDocument.accountBalance,
-            transactionCount: change.fullDocument.transactionCount,
-            loginAttempts: change.fullDocument.loginAttempts,
-            averageSessionTimeInMinutes: change.fullDocument.averageSessionTimeInMinutes,
-            isActive: change.fullDocument.isActive,
-            lastLogin: change.fullDocument.lastLogin,
-            createdAt: change.fullDocument.createdAt,
-          };
-          socket.emit('newData', data); // Emit data to connected clients
+        const timestamp = new Date().toISOString();
+        
+        switch (change.operationType) {
+          case 'insert':
+            console.log(`[${timestamp}] INSERT in ${collectionName}:`, {
+              documentId: change.documentKey._id,
+              newDocument: change.fullDocument
+            });
+            break;
+            
+          case 'update':
+            console.log(`[${timestamp}] UPDATE in ${collectionName}:`, {
+              documentId: change.documentKey._id,
+              updatedFields: change.updateDescription.updatedFields,
+              removedFields: change.updateDescription.removedFields
+            });
+            break;
+            
+          case 'delete':
+            console.log(`[${timestamp}] DELETE in ${collectionName}:`, {
+              documentId: change.documentKey._id
+            });
+            break;
+            
+          default:
+            console.log(`[${timestamp}] ${change.operationType.toUpperCase()} operation in ${collectionName}:`, change);
         }
+      });
+
+      // Error handling for change stream
+      changeStream.on('error', error => {
+        console.error(`Error in ${collectionName} change stream:`, error);
       });
     });
 
@@ -64,8 +69,20 @@ async function watchCollection() {
     });
 
   } catch (err) {
-    console.error('Error watching collection:', err);
+    console.error('Error watching collections:', err);
+    if (client) {
+      await client.close();
+    }
   }
 }
 
-watchCollection();
+// Handle process termination
+process.on('SIGINT', async () => {
+  console.log('Closing MongoDB connection...');
+  if (client) {
+    await client.close();
+  }
+  process.exit();
+});
+
+watchCollections();

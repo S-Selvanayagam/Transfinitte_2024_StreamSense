@@ -18,3 +18,6 @@ up.rm:
 
 exe:
 	docker exec -it mongo1 /bin/bash 
+
+yeet:
+	docker compose -p poc-kafka-connect-cdc-mongodb-to-es down -v
