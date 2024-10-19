@@ -138,7 +138,13 @@ db.sampleData.updateOne(
 )
 ```
 
-5.2) you can monitoring data flow from these URL
+5.2) k6 load testing
+
+```sh
+k6 run load.js
+```
+
+5.3) you can monitoring data flow from these URL
 - [http://localhost:8888](http://localhost:8888) Redpanda
   - [http://localhost:8888/connect-clusters/connect-local](http://localhost:8888/connect-clusters/connect-local) manage Kafka connectors on UI
   - [http://localhost:8888/schema-registry](http://localhost:8888/schema-registry) manage Schema Registry that used from both source and sink connector
