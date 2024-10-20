@@ -1,23 +1,52 @@
 const { MongoClient } = require('mongodb');
 const { faker } = require('@faker-js/faker');
 
-// Configuration for different operations
+// Statistical functions don't need to be async since they don't involve I/O operations
+const normalDistribution = (mean, stdDev) => {
+  // Box-Muller transform for normal distribution
+  const u1 = Math.random();
+  const u2 = Math.random();
+  const z = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+  return mean + stdDev * z;
+};
+
+// Ensure value stays within bounds
+const clamp = (value, min, max) => Math.min(Math.max(Math.round(value), min), max);
+
 const config = {
   uri: 'mongodb://localhost:27017/?replicaSet=rs0&directConnection=true',
-  dbName: 'mass',
+  dbName: 'final',
   collections: ['dummyuser', 'geolocation', 'sales'],
   operations: {
     insert: {
-      batchSizeRange: { min: 1, max: 5 },
-      delayRange: { min: 100, max: 500 }
+      getBatchSize: () => {
+        // Mean of 5 with std dev of 2
+        return clamp(normalDistribution(5, 2), 1, 15);
+      },
+      getDelay: () => {
+        // Base delay with normal distribution
+        return clamp(normalDistribution(200, 50), 100, 400);
+      }
     },
     update: {
-      batchSizeRange: { min: 1, max: 3 },
-      delayRange: { min: 200, max: 800 }
+      getBatchSize: () => {
+        // Updates tend to be smaller than inserts
+        return clamp(normalDistribution(3, 1.5), 1, 10);
+      },
+      getDelay: () => {
+        // Updates slightly slower than inserts
+        return clamp(normalDistribution(300, 75), 150, 600);
+      }
     },
     delete: {
-      batchSizeRange: { min: 1, max: 2 },
-      delayRange: { min: 500, max: 1000 }
+      getBatchSize: () => {
+        // Deletes are typically smaller operations
+        return clamp(normalDistribution(2, 1), 1, 8);
+      },
+      getDelay: () => {
+        // Deletes happen less frequently
+        return clamp(normalDistribution(500, 100), 300, 800);
+      }
     }
   }
 };
@@ -30,10 +59,10 @@ const client = new MongoClient(config.uri, {
 
 // Base record generator with consistent timestamp handling
 const generateBaseRecord = () => ({
-  createdAt: new Date(),
-  updatedAt: new Date(),
-  deletedAt: new Date(0),
-  isDeleted: false
+  timestamp: new Date(),
+  isUpdated: false,
+  isDeleted: false,
+  action: 'insert'
 });
 
 // Function to generate a simplified numeric-heavy record for dummyuser
@@ -44,7 +73,7 @@ const generateSimpleNumericRecord = () => ({
   age: faker.number.int({ min: 18, max: 70 }),
   heightInCm: faker.number.int({ min: 150, max: 200 }),
   weightInKg: faker.number.float({ min: 50, max: 100, precision: 0.01 }),
-  accountBalance: parseFloat(faker.finance.amount(100, 10000, 2)).toFixed(2), // Ensure decimal
+  accountBalance: parseFloat(faker.finance.amount(100, 10000, 2)).toFixed(2),
   transactionCount: faker.number.int({ min: 1, max: 50 }),
   loginAttempts: faker.number.int({ min: 0, max: 10 }),
   averageSessionTimeInMinutes: faker.number.float({ min: 5, max: 60, precision: 0.01 }),
@@ -76,9 +105,6 @@ const generateSalesRecord = () => ({
   paymentMethod: faker.finance.transactionType()
 });
 
-// Function to get random configuration values
-const getRandomValue = (range) => Math.floor(Math.random() * (range.max - range.min + 1)) + range.min;
-
 // Function to get a list of records for bulk insertion
 const getRecordsBatch = (collectionName, batchSize) => {
   const records = [];
@@ -102,24 +128,26 @@ const getRecordsBatch = (collectionName, batchSize) => {
 const generateUpdateOperation = (record) => {
   const updates = {
     dummyuser: {
-      accountBalance: Number(faker.finance.amount(100, 10000, 2)),
+      accountBalance: parseFloat(faker.finance.amount(100, 10000, 2)).toFixed(2),
       score: faker.number.float({ min: 0, max: 100, precision: 0.01 }),
       isActive: faker.datatype.boolean()
     },
     geolocation: {
-      latitude: Number(faker.location.latitude()),
-      longitude: Number(faker.location.longitude()),
+      latitude: parseFloat(faker.location.latitude()).toFixed(2),
+      longitude: parseFloat(faker.location.longitude()).toFixed(2),
       isActive: faker.datatype.boolean()
     },
     sales: {
-      price: Number(faker.commerce.price({ min: 10, max: 1000, dec: 2 })),
+      price: parseFloat(faker.commerce.price({ min: 10, max: 1000, dec: 2 })).toFixed(2),
       quantity: faker.number.int({ min: 1, max: 10 })
     }
   };
 
   return {
     ...updates[record.collection],
-    updatedAt: new Date()
+    timestamp: new Date(),
+    isUpdated: true,
+    action: 'update'
   };
 };
 
@@ -128,11 +156,11 @@ async function handleInserts(db, collectionName) {
   const collection = db.collection(collectionName);
   while (true) {
     try {
-      const batchSize = getRandomValue(config.operations.insert.batchSizeRange);
+      const batchSize = config.operations.insert.getBatchSize();
       const records = getRecordsBatch(collectionName, batchSize);
       await collection.insertMany(records);
       console.log(`Inserted ${batchSize} records into ${collectionName}`);
-      await new Promise(resolve => setTimeout(resolve, getRandomValue(config.operations.insert.delayRange)));
+      await new Promise(resolve => setTimeout(resolve, config.operations.insert.getDelay()));
     } catch (err) {
       console.error(`Insert error in ${collectionName}:`, err);
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -144,7 +172,7 @@ async function handleUpdates(db, collectionName) {
   const collection = db.collection(collectionName);
   while (true) {
     try {
-      const batchSize = getRandomValue(config.operations.update.batchSizeRange);
+      const batchSize = config.operations.update.getBatchSize();
       const records = await collection.find({ isDeleted: false }).limit(batchSize).toArray();
       
       for (const record of records) {
@@ -155,7 +183,7 @@ async function handleUpdates(db, collectionName) {
         );
       }
       console.log(`Updated ${records.length} records in ${collectionName}`);
-      await new Promise(resolve => setTimeout(resolve, getRandomValue(config.operations.update.delayRange)));
+      await new Promise(resolve => setTimeout(resolve, config.operations.update.getDelay()));
     } catch (err) {
       console.error(`Update error in ${collectionName}:`, err);
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -167,7 +195,7 @@ async function handleDeletes(db, collectionName) {
   const collection = db.collection(collectionName);
   while (true) {
     try {
-      const batchSize = getRandomValue(config.operations.delete.batchSizeRange);
+      const batchSize = config.operations.delete.getBatchSize();
       const records = await collection.find({ isDeleted: false }).limit(batchSize).toArray();
       
       for (const record of records) {
@@ -176,13 +204,14 @@ async function handleDeletes(db, collectionName) {
           { 
             $set: { 
               isDeleted: true,
-              deletedAt: new Date()
+              timestamp: new Date(),
+              action: 'delete'
             } 
           }
         );
       }
       console.log(`Soft deleted ${records.length} records in ${collectionName}`);
-      await new Promise(resolve => setTimeout(resolve, getRandomValue(config.operations.delete.delayRange)));
+      await new Promise(resolve => setTimeout(resolve, config.operations.delete.getDelay()));
     } catch (err) {
       console.error(`Delete error in ${collectionName}:`, err);
       await new Promise(resolve => setTimeout(resolve, 1000));
