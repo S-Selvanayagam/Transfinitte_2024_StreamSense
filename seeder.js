@@ -85,8 +85,10 @@ const generateSimpleNumericRecord = () => ({
 const generateGeolocationRecord = () => ({
   ...generateBaseRecord(),
   userId: faker.number.int({ min: 1, max: 10000 }),
-  latitude: parseFloat(faker.location.latitude()).toFixed(2),
-  longitude: parseFloat(faker.location.longitude()).toFixed(2),
+  location: [
+    parseFloat(faker.location.longitude()).toFixed(2),
+    parseFloat(faker.location.latitude()).toFixed(2)
+  ],
   city: faker.location.city(),
   country: faker.location.country(),
   timestamp: faker.date.recent(),
