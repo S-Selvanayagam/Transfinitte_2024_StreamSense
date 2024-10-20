@@ -1,11 +1,31 @@
-# Stream data from MongoDB to Elasticsearch by using Kafka Connect
-A repository PoC streaming data from MongoDB as upstream to Elasticsearch downstream by using Kafka Connect and additional tools for monitoring. inspired by https://github.com/mongodb-university/kafka-edu repository
+# Transfinitte MD1
 
-# Prerequisites 🚀
-- [Docker](https://docs.docker.com/get-docker/)
+Solution is deployed on - https://smartpointers.deltaforce.dev
 
-# mongodb-source-to-elasticsearch-sink using JsonSchemaConverter
-An environment will PoC about to capture data changes from MongoDB to Elasticsearch use case
+Drive Link - https://drive.google.com/drive/folders/1qIhISexgK6LiKTiPe7RrMfAGTIPK12Sc?usp=sharing
+
+Building Real-Time Analytics Dashboards with MongoDB Change Streams
+MongoDB's change streams provide a way to track changes to the database in
+real-time. However, using change streams effectively for complex analytics
+and dashboards presents challenges, especially when dealing with multiple
+data sources and high-frequency updates.
+
+Create a system that uses MongoDB change streams to power real-time analytics
+dashboards. The solution should handle data aggregation from multiple
+collections, process real-time updates, and deliver insights within seconds.
+
+- Integrate change streams from multiple MongoDB collections to populate a
+real-time dashboard.
+
+- Support dynamic data filters, transformation rules, and customizable
+views.
+
+- Implement alerting mechanisms for detecting significant changes or
+trends.
+
+-  Design the system to handle high-frequency updates with minimal
+performance degradation
+
 
 `docker-compose` will contains these services
 - Apache Kafka
@@ -23,7 +43,7 @@ An environment will PoC about to capture data changes from MongoDB to Elasticsea
 ### Start Development 🚧
 step 1) you have to change directories and start all services by using
 ```sh
-cd playgrounds/mongodb-source-to-elasticsearch-sink
+cd playgrounds/mongodb-elasticsearch
 make up
 ```
 
@@ -141,28 +161,7 @@ db.sampleData.updateOne(
 5.2) k6 load testing
 
 ```sh
-k6 run load.js
+k6 run loader.js
 ```
 
-5.3) you can monitoring data flow from these URL
-- [http://localhost:8888](http://localhost:8888) Redpanda
-  - [http://localhost:8888/connect-clusters/connect-local](http://localhost:8888/connect-clusters/connect-local) manage Kafka connectors on UI
-  - [http://localhost:8888/schema-registry](http://localhost:8888/schema-registry) manage Schema Registry that used from both source and sink connector
-  - [http://localhost:8888/topics](http://localhost:8888/topics) manage message several topics that storing data from upstream
-- [http://localhost:8001](http://localhost:8001) alternative UI for managing schema registry
-- [http://127.0.0.1:5602/app/dev_tools#/console](http://127.0.0.1:5602/app/dev_tools#/console) Kibana Dev Tool for requesting command to Elasticsearch. for more requests, you can see at `scripts/elasticsearch/requests.es` ([ES extension - VS code extension](https://marketplace.visualstudio.com/items?itemName=ria.elastic))
 
-## References 🙏
-- [Kafka EDU - Mongodb University Org](https://github.com/mongodb-university/kafka-edu)
-- [Kafka Connect 101](https://developer.confluent.io/learn-kafka/kafka-connect/intro)
-- [Confluent REST Proxy for Kafka](https://github.com/confluentinc/kafka-rest)
-- [Schema Registry](https://docs.confluent.io/platform/current/schema-registry/index.html)
-- [Schema Registry UI](https://hub.docker.com/r/landoop/schema-registry-ui/)
-- [Redpanda + Schema Registry](https://docs.redpanda.com/docs/manage/schema-registry/)
-- [Redpanda Console](https://docs.redpanda.com/docs/manage/console/kafka-connect/)
-- [MongoDB Kafka Connector](https://docs.mongodb.com/kafka-connector/current/)
-- [Connectors to Kafka](https://docs.confluent.io/home/connect/overview.html)
-- [Change Events - MongoDB](https://www.mongodb.com/docs/manual/reference/change-events/)
-- [MongoDB connector for Kafka 1.3](https://www.mongodb.com/blog/post/mongo-db-connector-for-apache-kafka-1-3-available-now)
-- [Single Message Transforms for Confluent Platform](https://docs.confluent.io/platform/current/connect/transforms/overview.html)
-- [Debezium MongoDB Source Connector for Confluent Platform](https://docs.confluent.io/kafka-connectors/debezium-mongodb-source/current/overview.html#debezium-mongodb-source-connector-for-cp)
